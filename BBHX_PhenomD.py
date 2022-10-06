@@ -9,6 +9,15 @@ def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
     from pycbc import pnutils
 
     from bbhx.waveformbuild import BBHWaveformFD
+    from bbhx.utils.transform import LISA_to_SSB
+
+    # Translate into SSB frame for generation, better to sample in LISA frame
+    tSSB, lambdaSSB, betaSSB, psi = LISA_to_SSB(
+        params['tc'],
+        params['eclipticlongitude'],
+        params['eclipticlatitude'],
+        params['polarization']
+    )
 
     # Some of this could go into waveform.py eventually.
     # Is it slow to do this every time?? Does it need caching??
@@ -22,10 +31,10 @@ def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
     phi_ref = params['coa_phase']
     f_ref = 0 # This is now NOT standard LAL convention!
     inc = params['inclination']
-    lam = params['eclipticlongitude']
-    beta = params['eclipticlatitude']
-    psi = params['polarization']
-    t_ref = params['tc']
+    lam = lambdaSSB
+    beta = betaSSB
+    psi = psi
+    t_ref = tSSB
     if sample_points is None:
         print(1/params['t_obs_start'])
         freqs = np.arange(0, nyquist_freq, 1/params['t_obs_start'])
