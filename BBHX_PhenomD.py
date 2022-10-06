@@ -31,10 +31,23 @@ def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
     phi_ref = params['coa_phase']
     f_ref = 0 # This is now NOT standard LAL convention!
     inc = params['inclination']
+
+    if 'symmetrynum' in params:
+        long_num = params['symmetrynum'] % 4
+        lat_num = params['symmetrynum'] // 4
+        # Apply longitudonal symmetry mode
+        lambdaSSB = (lambdaSSB + long_num * math.pi) % (2*math.pi)
+        psi = (psi + long_num * math.pi) % math.pi
+        # Apply latitude symmetry mode
+        if lat_num:
+            betaSSB = -betaSSB
+            inc = math.pi - inc
+            psi = math.pi - psi
+
     lam = lambdaSSB
     beta = betaSSB
-    psi = psi
     t_ref = tSSB
+
     if sample_points is None:
         print(1/params['t_obs_start'])
         freqs = np.arange(0, nyquist_freq, 1/params['t_obs_start'])
