@@ -1,9 +1,12 @@
+_wave_gen = None
+
 def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
                             sample_points=None, **params):
 
     if ifos is None:
         raise Exception("Must define data streams to compute")
 
+    import math
     import numpy as np
     from pycbc.types import FrequencySeries, Array
     from pycbc import pnutils
@@ -11,17 +14,14 @@ def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
     from bbhx.waveformbuild import BBHWaveformFD
     from bbhx.utils.transform import LISA_to_SSB
 
-    # Translate into SSB frame for generation, better to sample in LISA frame
-    tSSB, lambdaSSB, betaSSB, psi = LISA_to_SSB(
-        params['tc'],
-        params['eclipticlongitude'],
-        params['eclipticlatitude'],
-        params['polarization']
-    )
-
     # Some of this could go into waveform.py eventually.
     # Is it slow to do this every time?? Does it need caching??
-    wave_gen = BBHWaveformFD(amp_phase_kwargs=dict(run_phenomd=run_phenomd))
+    global _wave_gen
+    if _wave_gen is None:
+        wave_gen = BBHWaveformFD(amp_phase_kwargs=dict(run_phenomd=run_phenomd))
+        _wave_gen = wave_gen
+    else:
+        wave_gen = _wave_gen
 
     m1 = params['mass1']
     m2 = params['mass2']
@@ -31,18 +31,34 @@ def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
     phi_ref = params['coa_phase']
     f_ref = 0 # This is now NOT standard LAL convention!
     inc = params['inclination']
+    lambdaL = params['eclipticlongitude']
+    betaL = params['eclipticlatitude']
+    psiL = params['polarization']
+    psiL = psiL + lambdaL
 
     if 'symmetrynum' in params:
-        long_num = params['symmetrynum'] % 4
-        lat_num = params['symmetrynum'] // 4
+        pol_num = params['symmetrynum'] // 8
+        sym_num = params['symmetrynum'] % 8
+        long_num = sym_num % 4
+        lat_num = sym_num // 4
         # Apply longitudonal symmetry mode
-        lambdaSSB = (lambdaSSB + long_num * math.pi) % (2*math.pi)
-        psi = (psi + long_num * math.pi) % math.pi
+        lambdaL = (lambdaL + long_num * 0.5 * math.pi) % (2*math.pi)
+        if pol_num:
+            psiL = psiL + (math.pi / 2.)
+        psiL = (psiL + long_num * 0.5 * math.pi) % math.pi
         # Apply latitude symmetry mode
         if lat_num:
-            betaSSB = -betaSSB
+            betaL = -betaL
             inc = math.pi - inc
-            psi = math.pi - psi
+            psiL = math.pi - psiL
+
+    # Translate into SSB frame for generation, better to sample in LISA frame
+    tSSB, lambdaSSB, betaSSB, psi = LISA_to_SSB(
+        params['tc'],
+        lambdaL,
+        betaL,
+        psiL
+    )
 
     lam = lambdaSSB
     beta = betaSSB
