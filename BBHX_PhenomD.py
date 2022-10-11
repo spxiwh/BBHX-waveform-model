@@ -41,16 +41,20 @@ def bbhx_fd(ifos=None, run_phenomd=True, nyquist_freq=0.1,
         sym_num = params['symmetrynum'] % 8
         long_num = sym_num % 4
         lat_num = sym_num // 4
-        # Apply longitudonal symmetry mode
-        lambdaL = (lambdaL + long_num * 0.5 * math.pi) % (2*math.pi)
-        if pol_num:
-            psiL = psiL + (math.pi / 2.)
-        psiL = (psiL + long_num * 0.5 * math.pi) % math.pi
+
         # Apply latitude symmetry mode
         if lat_num:
             betaL = -betaL
             inc = math.pi - inc
             psiL = math.pi - psiL
+
+        # Apply longitudonal symmetry mode
+        lambdaL = (lambdaL + long_num * 0.5 * math.pi) % (2*math.pi)
+        psiL = (psiL + long_num * 0.5 * math.pi) % math.pi
+
+        # Apply additional polarization mode (shouldn't be needed!)
+        if pol_num:
+            psiL = psiL + (math.pi / 2.)
 
     # Translate into SSB frame for generation, better to sample in LISA frame
     tSSB, lambdaSSB, betaSSB, psi = LISA_to_SSB(
